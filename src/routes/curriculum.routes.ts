@@ -3,7 +3,7 @@ import multer from 'multer';
 import { query } from '../db/pool.js';
 import { authMiddleware, familyGuard, type AuthRequest } from '../middleware/auth.js';
 import { aiContentGenerator } from '../services/ai/AIContentGenerator.js';
-import { prepareImageFromMulter } from '../services/ai/imageUtils.js';
+import { prepareImageFromBase64, prepareImageFromMulter } from '../services/ai/imageUtils.js';
 import type { Child, ChildInterests, Unit } from '../types/index.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -25,18 +25,31 @@ curriculumRouter.get('/:childId', familyGuard, async (req, res) => {
 /**
  * POST /curriculum/:childId/scan
  * 📸 Escanear Programa Completo (Crear Mapa)
- * Requiere sesión Google + family_id autorizado
+ * Acepta JSON { imageBase64, mimeType } (Expo/RN) o multipart campo image.
  */
 curriculumRouter.post(
   '/:childId/scan',
   familyGuard,
-  upload.single('image'),
+  (req, res, next) => {
+    const contentType = req.headers['content-type'] ?? '';
+    if (contentType.includes('multipart/form-data')) {
+      upload.single('image')(req, res, next);
+      return;
+    }
+    next();
+  },
   async (req: AuthRequest, res) => {
     const childId = String(req.params.childId);
     const file = req.file;
+    const body = req.body as { imageBase64?: string; mimeType?: string };
 
-    if (!file) {
-      res.status(400).json({ error: 'Imagen requerida (campo: image)' });
+    let prepared;
+    if (file) {
+      prepared = prepareImageFromMulter(file);
+    } else if (body.imageBase64) {
+      prepared = prepareImageFromBase64(body.imageBase64, body.mimeType ?? 'image/jpeg');
+    } else {
+      res.status(400).json({ error: 'Imagen requerida (imageBase64 o campo image)' });
       return;
     }
 
@@ -50,8 +63,6 @@ curriculumRouter.post(
     const interests = (typeof child.interests === 'string'
       ? JSON.parse(child.interests)
       : child.interests) as ChildInterests;
-
-    const prepared = prepareImageFromMulter(file);
 
     const result = await aiContentGenerator.generateCurriculumFromIndex({
       childId,

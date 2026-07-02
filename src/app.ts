@@ -14,7 +14,7 @@ export function createApp() {
 
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN }));
-  app.use(express.json({ limit: '2mb' }));
+  app.use(express.json({ limit: '15mb' }));
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', service: 'treasure-hunter-api' });
