@@ -21,8 +21,8 @@ export interface GenerateCurriculumResult {
 
 /**
  * Controlador central de IA — SDK oficial @google/generative-ai en Railway.
- * - gemini-1.5-pro: OCR multimodal del índice (responseSchema)
- * - gemini-1.5-flash: Teacher Mode (ver TeacherModeService)
+ * - gemini-2.5-pro: OCR multimodal del índice (responseSchema)
+ * - gemini-2.5-flash: Teacher Mode (ver TeacherModeService)
  */
 export class AIContentGenerator {
   isConfigured(): boolean {
@@ -69,10 +69,16 @@ export class AIContentGenerator {
 
       return { success: true, units };
     } catch (err) {
+      const raw = err instanceof Error ? err.message : 'Error desconocido en Gemini';
+      const friendly = raw.includes('404 Not Found') && raw.includes('models/')
+        ? 'Modelo de IA desactualizado en el servidor. Contactá al administrador para actualizar Gemini.'
+        : raw.includes('API key')
+          ? 'Clave de Gemini inválida o no configurada en Railway.'
+          : raw;
       return {
         success: false,
         units: [],
-        error: err instanceof Error ? err.message : 'Error desconocido en Gemini',
+        error: friendly,
       };
     }
   }
