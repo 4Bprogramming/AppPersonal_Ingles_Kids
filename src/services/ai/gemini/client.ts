@@ -18,6 +18,6 @@ export function isGeminiConfigured(): boolean {
 }
 
 export const GEMINI_MODELS = {
-  vision: env.GEMINI_MODEL || 'gemini-2.5-pro',
+  vision: env.GEMINI_MODEL || 'gemini-2.5-flash',
   flash: env.GEMINI_FLASH_MODEL || 'gemini-2.5-flash',
 } as const;
